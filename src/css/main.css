@@ -1,0 +1,17 @@
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+}
+
+.photo-card-img {
+  width: 400px;
+  height: 250px;
+}
+
+.load-more {
+  margin: 0 auto;
+  width: 150px;
+  height: 60px;
+  display: none;
+}
