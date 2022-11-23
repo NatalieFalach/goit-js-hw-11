@@ -5,30 +5,25 @@ import './css/main.css';
 import throttle from 'lodash.throttle';
 import { pixaBayApi } from './js/pixaBayApi';
 
-const PER_PAGE = 10;
+const PER_PAGE = 40;
 const refs = {
   searchForm: document.querySelector('#search-form'),
   gallery: document.querySelector('.gallery'),
   buttonEl: document.querySelector('.load-more'),
+  guard: document.querySelector('.js-guard'),
 };
+let page = 1;
+const lightbox = new SimpleLightbox('.gallery a', {});
 
 refs.searchForm.addEventListener('submit', onSubmitForm);
-// refs.buttonEl.addEventListener('click', onMoreClick);
-let page = 1;
 
-const lightbox = new SimpleLightbox('.gallery a', {});
-const onThrottleScroll = throttle(onScroll, 500);
+const observer = new IntersectionObserver(onScroll, {
+  root: null,
+  rootMargin: '700px',
+  threshold: 1.0,
+});
 
-function onScroll(e) {
-  const endOfPage =
-    window.innerHeight + window.scrollY >= document.body.offsetHeight;
-
-  if (endOfPage) {
-    onMoreClick();
-  }
-}
-
-function onSubmitForm(e) {
+async function onSubmitForm(e) {
   e.preventDefault();
 
   const searchForm = e.currentTarget;
@@ -36,10 +31,11 @@ function onSubmitForm(e) {
     searchQuery: { value: inputQuery },
   } = searchForm.elements;
 
-  pixaBayApi(inputQuery, 1, PER_PAGE).then(data => {
-    console.log(data);
+  try {
+    const data = await pixaBayApi(inputQuery, 1, PER_PAGE);
+
     if (!data.total) {
-      Notify.success(
+      Notify.failure(
         'Sorry, there are no images matching your search query. Please try again.'
       );
       return;
@@ -52,31 +48,38 @@ function onSubmitForm(e) {
 
     refs.gallery.innerHTML = getImagesMarkup(data);
     lightbox.refresh();
-    window.addEventListener('scroll', onThrottleScroll);
-    // refs.buttonEl.style.display = 'block';
-  });
+    observer.observe(refs.guard);
+  } catch (e) {
+    console.info(e);
+  }
 }
 
-function onMoreClick(e) {
+function onScroll(entries, observer) {
   const {
     searchQuery: { value: inputQuery },
   } = refs.searchForm.elements;
+
   page++;
 
-  pixaBayApi(inputQuery, page, PER_PAGE).then(data => {
-    if (data.totalHits <= page * PER_PAGE) {
-      Notify.success(
-        `We're sorry, but you've reached the end of search results.`
-      );
-      // refs.buttonEl.style.display = 'none';
-      window.removeEventListener('scroll', onThrottleScroll);
-    }
+  try {
+    entries.forEach(async entry => {
+      if (entry.isIntersecting) {
+        const data = await pixaBayApi(inputQuery, page, PER_PAGE);
 
-    refs.gallery.insertAdjacentHTML('beforeend', getImagesMarkup(data));
-    lightbox.refresh();
-  });
+        if (data.totalHits <= page * PER_PAGE) {
+          Notify.failure(
+            `We're sorry, but you've reached the end of search results.`
+          );
+          observer.unobserve(refs.guard);
+        }
 
-  smoothScroll();
+        refs.gallery.insertAdjacentHTML('beforeend', getImagesMarkup(data));
+        lightbox.refresh();
+      }
+    });
+  } catch (e) {
+    console.info(e);
+  }
 }
 
 function getImagesMarkup(data) {
@@ -88,29 +91,19 @@ function getImagesMarkup(data) {
       </a>
       <div class="info">
         <p class="info-item">
-          <b>Likes: ${image.likes}</b>
+          <b class="info-text">Likes:</b> <br/>${image.likes}
         </p>
         <p class="info-item">
-          <b>Views: ${image.views}</b>
+          <b class="info-text">Views:</b> <br/>${image.views}
         </p>
         <p class="info-item">
-          <b>Comments: ${image.comments}</b>
+          <b class="info-text">Comments:</b><br/>${image.comments}
         </p>
         <p class="info-item">
-          <b>Downloads: ${image.downloads}</b>
+          <b class="info-text">Downloads:</b><br/> ${image.downloads}
         </p>
       </div>
     </div>`;
     })
     .join('');
-}
-
-function smoothScroll() {
-  const { height: cardHeight } =
-    refs.gallery.firstElementChild.getBoundingClientRect();
-
-  window.scrollBy({
-    top: cardHeight * 2,
-    behavior: 'smooth',
-  });
 }

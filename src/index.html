@@ -9,16 +9,24 @@
 </head>
 
 <body>
-  <form class="search-form" id="search-form">
-    <input type="text" name="searchQuery" autocomplete="off" placeholder="Search images..." />
-    <button type="submit">Search</button>
-  </form>
-
-  <div class="gallery">
-    <!-- Карточки изображений -->
+  <div class="wrapper">
+    <form class="search-form" id="search-form">
+      <input type="text" name="searchQuery" autocomplete="off" placeholder="Search images..." />
+      <button type="submit">
+        <svg class="icon-search">
+          <use href="./img/search.svg#search"></use>
+        </svg>
+      </button>
+    </form>
   </div>
-  <button type="button" class="load-more">Load more</button>
 
+  <div class="section">
+    <div class="gallery">
+    </div>
+  </div>
+
+  <button type="button" class="load-more">Load more</button>
+  <div class="js-guard"></div>
 </body>
 
 <script src="./index.js" type="module"></script>
